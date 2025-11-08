@@ -1,0 +1,57 @@
+import os
+from typing import Any, Dict, Optional
+
+try:
+    from supabase import create_client, Client
+except Exception:
+    # Defer import error until runtime if package missing — helpful for quick lint/syntax checks
+    create_client = None
+    Client = None
+
+
+class SupabaseClient:
+    """Minimal wrapper around supabase-py to insert/select rows.
+
+    Requires SUPABASE_URL and SUPABASE_API_KEY set in environment.
+    """
+
+    def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None):
+        """Initialize Supabase client.
+        
+        Args:
+            url: Supabase URL (defaults to SUPABASE_URL env var)
+            api_key: Supabase API key (defaults to SUPABASE_API_KEY env var)
+        """
+        supabase_url = url or os.getenv("SUPABASE_URL")
+        supabase_api_key = api_key or os.getenv("SUPABASE_API_KEY")
+        
+        if not supabase_url or not supabase_api_key:
+            raise RuntimeError("SUPABASE_URL and SUPABASE_API_KEY must be set in environment")
+        if create_client is None:
+            raise RuntimeError("supabase package is not installed. Add 'supabase' to requirements.txt and pip install -r requirements.txt")
+
+        # avoid using forward type annotation here because the supabase Client symbol may not be present
+        self.client = create_client(supabase_url, supabase_api_key)
+
+    def insert(self, table: str, record: Dict[str, Any]) -> Any:
+        """Insert a single record into a table. Returns inserted data or raises RuntimeError."""
+        res = self.client.table(table).insert(record).execute()
+        if getattr(res, "error", None):
+            raise RuntimeError(res.error)
+        return getattr(res, "data", None)
+
+    def upsert(self, table: str, record: Dict[str, Any], on_conflict: Optional[str] = None) -> Any:
+        """Upsert a record (insert or update on conflict). Returns upserted data or raises RuntimeError."""
+        res = self.client.table(table).upsert(record, on_conflict=on_conflict).execute()
+        if getattr(res, "error", None):
+            raise RuntimeError(res.error)
+        return getattr(res, "data", None)
+
+    def select(self, table: str, columns: str = "*", match: Optional[Dict] = None) -> Any:
+        q = self.client.table(table).select(columns)
+        if match:
+            q = q.match(match)
+        res = q.execute()
+        if getattr(res, "error", None):
+            raise RuntimeError(res.error)
+        return getattr(res, "data", None)
