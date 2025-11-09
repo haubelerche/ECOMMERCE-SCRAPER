@@ -1,12 +1,12 @@
-# Tiki Product Scraper 
+# Ecommerce Scraper 
 
-Tiki Product Scraper is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
+Ecommerce Scraper is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
 
 Purpose
 
 General purpose
 
-The Tiki Product Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
+The Ecommerce Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
 
 - Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
 - Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
@@ -66,7 +66,7 @@ Follow these steps to set up the project locally on Windows using PowerShell.
 
 ```powershell
 git clone <repo-url>
-cd "Tiki Product Scraper"
+cd "Ecommerce Scraper"
 ```
 
 2) Create and activate a virtual environment (recommended)
@@ -133,7 +133,7 @@ API examples
 - Health: GET `/health`
 - Simple chat: POST `/chat/simple` with JSON { messages: [...], llm_choice: 'openai' }
 - Text-to-SQL: POST `/query` with JSON { question: '...', llm_choice: 'openai' }
-- Scrape Tiki product: POST `/api/scrape/tiki` with JSON { url: '...', max_pages: 1, per_page: 20 }
+- Scrape product: POST `/api/scrape/tiki` with JSON { url: '...', max_pages: 1, per_page: 20 }
 
 Testing
 
@@ -147,7 +147,7 @@ Note: some integration tests require network access and Supabase credentials. Th
 
 Roadmap / next steps
 
-- Extend scrapers to cover more Tiki categories (home, books, fashion).
+- Extend scrapers to cover more categories (home, books, fashion).
 - Integrate a vector store + RAG pipeline to enable a product-review chatbot.
 - Harden scraping (proxies, rotating user agents, robust retry and backoff).
 - Add sentiment analysis and a small analytics dashboard.
