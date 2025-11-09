@@ -2,24 +2,24 @@
 
 Ecommerce Scraper is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
 
-Purpose
+# Purpose
 
-General purpose
+- General purpose
 
-The Ecommerce Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
+   The Ecommerce Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
+   
+   - Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
+   - Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
 
-- Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
-- Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
+- Backend-specific goals
 
-Backend-specific goals
+   This backend release focuses on:
+   
+   - Collecting and processing review/product data from Tiki (electronics categories initially).
+   - Producing a clean, structured dataset suitable for downstream AI/NLP tasks such as summary generation and sentiment analysis.
+   - Serving APIs for scraping, ingestion, querying, and AI-assisted analysis.
 
-This backend release focuses on:
-
-- Collecting and processing review/product data from Tiki (electronics categories initially).
-- Producing a clean, structured dataset suitable for downstream AI/NLP tasks such as summary generation and sentiment analysis.
-- Serving APIs for scraping, ingestion, querying, and AI-assisted analysis.
-
-System overview
+# System overview
 
 The backend is organized as a pipeline:
 
@@ -30,7 +30,7 @@ The backend is organized as a pipeline:
 - Testing: pytest-based tests to validate scrapers and integration flows (`tests/`).
 
 
-Technology and libraries
+# Technology and libraries
 
 - Language: Python 3.10+
 - Web scraping: requests, BeautifulSoup4, Playwright (optional) for browser automation
@@ -58,7 +58,7 @@ Repository layout (important files)
 └── README.md
 ```
 
-Installation and setup (Windows / PowerShell)
+# Installation and setup (Windows / PowerShell)
 
 Follow these steps to set up the project locally on Windows using PowerShell.
 
