@@ -24,9 +24,9 @@ from scraper.tiki_category_scraper import (
 
 load_dotenv()
 
-# Centralized CORS origins: can be overridden by env CORS_ORIGINS (comma-separated)
-DEFAULT_CORS = "http://localhost:5173,https://insightlytics-chatbot.vercel.app"
-ALLOWED_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", DEFAULT_CORS).split(",") if o.strip()]
+
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS").split(",") if o.strip()]
+ALLOW_CREDENTIALS = "*" not in ALLOWED_ORIGINS
 
 app = FastAPI()
 
@@ -34,10 +34,12 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+print(f"🔧 CORS configured: origins={ALLOWED_ORIGINS} allow_credentials={ALLOW_CREDENTIALS}")
 
 # Initialize Supabase client for storing scraped reviews
 try:
@@ -177,7 +179,7 @@ def nl_to_sql_gemini(question: str, table_info: str) -> str:
     """
 
     # Choose a stable flash model (update if quota/model name changes)
-    model = genai.GenerativeModel('gemini-1.5-flash')  # type: ignore
+    model = genai.GenerativeModel('gemini-2.5-flash')  # type: ignore
     response = model.generate_content(prompt)
 
     return response.text.strip()
@@ -201,7 +203,7 @@ def nl_to_sql_local(question: str, table_info: str) -> str:
     response = requests.post(
         f"{LOCAL_LLM_URL}/v1/chat/completions",
         json={
-            "model": "defog/sqlcoder-7b-2/sqlcoder-7b-q5_k_m.gguf",  # or any other model you have in Ollama
+            "model": "deepseek-r1:8b",  # or any other model you have in Ollama
             "messages": [
                 {
                     "role": "system",
@@ -418,7 +420,7 @@ def format_response_local(prompt: str) -> str:
     response = requests.post(
         f"{LOCAL_LLM_URL}/v1/chat/completions",
         json={
-            "model": "defog/sqlcoder-7b-2/sqlcoder-7b-q5_k_m.gguf",
+            "model": "deepseek-r1:8b", 
             "messages": [
                 {
                     "role": "system",
@@ -534,7 +536,7 @@ SQL: SELECT r.*, p.product_name FROM reviews r JOIN products p ON r.product_id =
             response = requests.post(
                 f"{LOCAL_LLM_URL}/v1/chat/completions",
                 json={
-                    "model": "defog/sqlcoder-7b-2/sqlcoder-7b-q5_k_m.gguf",  # or any other model you have in Ollama
+                    "model": "deepseek-r1:8b",  # or any other model you have in Ollama
                     "messages": messages,
                     "stream": False
                 }
@@ -989,6 +991,13 @@ async def root():
         "health": "/health",
         "docs": "/docs"
     }
+
+
+@app.head("/")
+async def root_head():
+    """HEAD handler for platform probes to avoid 405 noise."""
+    from fastapi import Response
+    return Response(status_code=204)
 
 
 @app.get("/health")
