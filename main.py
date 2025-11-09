@@ -9,9 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
-import google.generativeai as genai
 import requests
-import pandas as pd
 from dotenv import load_dotenv
 from typing import List, Literal, Optional
 import random
@@ -25,12 +23,17 @@ from scraper.tiki_category_scraper import (
 )
 
 load_dotenv()
+
+# Centralized CORS origins: can be overridden by env CORS_ORIGINS (comma-separated)
+DEFAULT_CORS = "http://localhost:5173,https://insightlytics-chatbot.vercel.app"
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", DEFAULT_CORS).split(",") if o.strip()]
+
 app = FastAPI()
 
 # Add CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +52,17 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL")  # Default Ollama port
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
-genai.configure(api_key=GEMINI_API_KEY)
+
+# Make Gemini optional: try to import at startup, but don't fail if missing
+try:
+    import google.generativeai as genai  # type: ignore
+    GENAI_AVAILABLE = True
+    if GEMINI_API_KEY:
+        genai.configure(api_key=GEMINI_API_KEY)
+except Exception as _e:  # ImportError or other misconfig
+    GENAI_AVAILABLE = False
+    genai = None  # type: ignore
+    print(f"⚠️ google-generativeai not available; Gemini features disabled: {_e}")
 
 
 # Pydantic models
@@ -87,6 +100,8 @@ def choose_llm(llm_choice: str):
     if llm_choice == "openai":
         return nl_to_sql_openai
     elif llm_choice == "gemini":
+        if not GENAI_AVAILABLE:
+            raise HTTPException(status_code=503, detail="Gemini is unavailable on this deployment (missing google-generativeai)")
         return nl_to_sql_gemini
     elif llm_choice == "local":
         return nl_to_sql_local
@@ -97,10 +112,7 @@ def choose_llm(llm_choice: str):
 def get_default_db_credentials() -> DBCredentials:
     """Get database credentials from Supabase connection string"""
     supabase_url = os.getenv("SUPABASE_URL", "")
-    
-    # Parse Supabase URL to get database info
-    # Supabase format: https://xxx.supabase.co
-    # Database is PostgreSQL hosted by Supabase
+   
     if "supabase.co" in supabase_url:
         project_id = supabase_url.replace("https://", "").replace(".supabase.co", "")
         return DBCredentials(
@@ -150,6 +162,8 @@ def nl_to_sql_openai(question: str, table_info: str) -> str:
 
 
 def nl_to_sql_gemini(question: str, table_info: str) -> str:
+    if not GENAI_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Gemini not installed on server")
     prompt = f"""
     Given the following tables in a PostgreSQL database, Also the sql code should not have ``` in beginning or end and sql word in output:
 
@@ -162,7 +176,8 @@ def nl_to_sql_gemini(question: str, table_info: str) -> str:
     Return only the SQL query, without any additional explanation.
     """
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Choose a stable flash model (update if quota/model name changes)
+    model = genai.GenerativeModel('gemini-1.5-flash')  # type: ignore
     response = model.generate_content(prompt)
 
     return response.text.strip()
@@ -224,11 +239,6 @@ def get_db_structure(db_credentials: DBCredentials = None):
 
 
 def execute_sql_query(query: str, db_credentials: DBCredentials = None):
-    """Execute query using Supabase client - parses SELECT queries with JOIN support.
-    
-    Supports: SELECT with JOIN, WHERE (ILIKE, =), GROUP BY, ORDER BY, LIMIT
-    Enhanced with exact match detection for precise product searches.
-    """
     try:
         if not supabase_client:
             raise HTTPException(status_code=503, detail="Supabase client not initialized")
@@ -242,8 +252,7 @@ def execute_sql_query(query: str, db_credentials: DBCredentials = None):
         # Check if it's a SQL query
         if not re.search(r'SELECT\s+', query, re.IGNORECASE):
             return [{"message": "I'm ready to help! Ask me about Tiki products and I'll search the reviews for you."}]
-        
-        # Detect if query has JOIN
+
         has_join = bool(re.search(r'\sJOIN\s', query, re.IGNORECASE))
         
         if has_join:
@@ -265,16 +274,14 @@ def execute_sql_query(query: str, db_credentials: DBCredentials = None):
                 if ilike_match:
                     search_term = ilike_match.group(1)
                     print(f"🔎 Fuzzy search for: {search_term}")
-                    
-                    # Strategy: Try exact match first, then fuzzy if no results
-                    # First attempt: exact match (case-insensitive)
+
                     q_exact = supabase_client.client.table("reviews").select("*, products(product_name, category)")
                     q_exact = q_exact.filter("products.product_name", "ilike", search_term)
                     result_exact = q_exact.limit(20).execute()
                     
                     if result_exact.data and len(result_exact.data) > 0:
                         # Found exact matches
-                        print(f"✅ Found {len(result_exact.data)} exact matches")
+                        print(f"Found {len(result_exact.data)} exact matches")
                         return result_exact.data
                     else:
                         # No exact match, use fuzzy search
@@ -400,7 +407,9 @@ def format_response_openai(prompt: str) -> str:
 
 
 def format_response_gemini(prompt: str) -> str:
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    if not GENAI_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Gemini not installed on server")
+    model = genai.GenerativeModel('gemini-1.5-flash')  # type: ignore
     response = model.generate_content(prompt)
     return response.text.strip()
 
