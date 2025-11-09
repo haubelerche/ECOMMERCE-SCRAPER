@@ -978,6 +978,19 @@ async def get_electronics_categories():
     }
 
 
+@app.get("/")
+async def root():
+    """Root route for platform health checks and human-friendly info.
+    Some platforms probe '/' — return a helpful payload instead of 404.
+    """
+    return {
+        "status": "ok",
+        "message": "Chatbot Reviewer Backend. See /health or /docs",
+        "health": "/health",
+        "docs": "/docs"
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -993,3 +1006,10 @@ async def health_check():
             "categories": "/api/electronics/categories"
         }
     }
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Return a 204 for favicon probes to reduce 404 log noise."""
+    from fastapi import Response
+    return Response(status_code=204)
