@@ -55,3 +55,30 @@ class SupabaseClient:
         if getattr(res, "error", None):
             raise RuntimeError(res.error)
         return getattr(res, "data", None)
+    
+    def text_search(self, table: str, column: str, query: str, columns: str = "*", config: str = "english") -> Any:
+        """Full-text search using PostgreSQL text search with ranking.
+        
+        Args:
+            table: Table name to search in
+            column: Column name to search (e.g., 'product_name')
+            query: Search query text
+            columns: Columns to return (default: "*")
+            config: Text search configuration (default: "english")
+        
+        Returns:
+            Matched rows ordered by relevance
+        """
+        q = self.client.table(table).select(columns)
+        q = q.text_search(column, f"'{query}'", config=config)
+        res = q.execute()
+        if getattr(res, "error", None):
+            raise RuntimeError(res.error)
+        return getattr(res, "data", None)
+
+    def rpc(self, function_name: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Call a PostgreSQL function via Supabase RPC. Returns function result or raises RuntimeError."""
+        res = self.client.rpc(function_name, params or {}).execute()
+        if getattr(res, "error", None):
+            raise RuntimeError(res.error)
+        return getattr(res, "data", None)
