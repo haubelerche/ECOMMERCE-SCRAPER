@@ -1,12 +1,12 @@
-# Tiki Product Reviewer — Backend
+# Tiki Product Scraper 
 
-Tiki Product Reviewer is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
+Tiki Product Scraper is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
 
 Purpose
 
 General purpose
 
-The Tiki Product Reviewer project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
+The Tiki Product Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
 
 - Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
 - Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
@@ -29,13 +29,6 @@ The backend is organized as a pipeline:
 - Storage: Supabase client wrapper used to insert and query review records (`scripts/supabase_client.py`).
 - Testing: pytest-based tests to validate scrapers and integration flows (`tests/`).
 
-Key features
-
-- Scraping of categories and products (`scripts/scraper/tiki_category_scraper.py`, `scripts/scraper/tiki_scraper.py`, `scripts/scraper/scrape_electronics.py`).
-- REST API entry point and chat/query endpoints (`main.py`).
-- OpenAI/LLM wrapper for generating summaries or converting NL to SQL (`scripts/openai_wrapper.py`).
-- Supabase integration for persistent storage (`scripts/supabase_client.py`).
-- Tests and integration checks (`tests/test_scraper.py`, `tests/test_integration.py`, `test_backend.py`).
 
 Technology and libraries
 
@@ -73,7 +66,7 @@ Follow these steps to set up the project locally on Windows using PowerShell.
 
 ```powershell
 git clone <repo-url>
-cd "Tiki Product Reviewer Backend"
+cd "Tiki Product Scraper"
 ```
 
 2) Create and activate a virtual environment (recommended)
