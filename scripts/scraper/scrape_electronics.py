@@ -1,15 +1,4 @@
-"""CLI: Scrape Tiki electronics categories and insert into Supabase.
 
-Usage:
-  python scripts/scrape_electronics.py [--max-pages-per-category N] [--per-page M] [--include-reviews] [--dry-run]
-
-Environment variables required:
-  SUPABASE_URL
-  SUPABASE_API_KEY
-
-The script uses the existing `scraper.tiki_category_scraper.scrape_all_electronics`
-function and `supabase_client.SupabaseClient` wrapper present in the repo.
-"""
 from __future__ import annotations
 
 import argparse

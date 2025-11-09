@@ -2,24 +2,24 @@
 
 Ecommerce Scraper is the backend service for collecting, cleaning, storing, and analyzing product reviews scraped from e-commerce marketplaces (initial focus: Tiki). The backend provides scraping utilities, data normalization, storage via Supabase, and AI/NLP helpers to generate summaries or run natural-language queries against the data.
 
-# Purpose
+#### Purpose
 
-- General purpose
+General purpose
 
-   The Ecommerce Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
-   
-   - Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
-   - Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
+The Ecommerce Scraper project aims to provide richer, multi-perspective product reviews built from real user feedback. The system helps:
 
-- Backend-specific goals
+- Consumers: get a broader view of a product before purchase through aggregated reviews and AI-generated summaries.
+- Businesses: extract customer insights to identify strengths and weaknesses, and inform product or UX improvements.
 
-   This backend release focuses on:
-   
-   - Collecting and processing review/product data from Tiki (electronics categories initially).
-   - Producing a clean, structured dataset suitable for downstream AI/NLP tasks such as summary generation and sentiment analysis.
-   - Serving APIs for scraping, ingestion, querying, and AI-assisted analysis.
+#### Backend-specific goals
 
-# System overview
+This backend release focuses on:
+
+- Collecting and processing review/product data from Tiki (electronics categories initially).
+- Producing a clean, structured dataset suitable for downstream AI/NLP tasks such as summary generation and sentiment analysis.
+- Serving APIs for scraping, ingestion, querying, and AI-assisted analysis.
+
+#### System overview
 
 The backend is organized as a pipeline:
 
@@ -30,7 +30,7 @@ The backend is organized as a pipeline:
 - Testing: pytest-based tests to validate scrapers and integration flows (`tests/`).
 
 
-# Technology and libraries
+#### Technology and libraries
 
 - Language: Python 3.10+
 - Web scraping: requests, BeautifulSoup4, Playwright (optional) for browser automation
@@ -58,7 +58,7 @@ Repository layout (important files)
 └── README.md
 ```
 
-# Installation and setup (Windows / PowerShell)
+#### Installation and setup (Windows / PowerShell)
 
 Follow these steps to set up the project locally on Windows using PowerShell.
 
@@ -82,14 +82,39 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-4) (Optional) Install Playwright browsers for browser-based scraping
+4) Create a `.env` file at project root with required environment variables
 
-```powershell
-playwright install chromium
+```
+OPENAI_API_KEY=sk-...
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_API_KEY=eyJ...
+GEMINI_API_KEY=your-gemini-key
+LOCAL_LLM_URL=http://localhost:11434
+SCRAPER_PORT=
 ```
 
-5) Create a `.env` file at project root with required environment variables
-   
+
+#### Running the project
+
+Development mode — run FastAPI and the scraper separately:
+
+1) Start the FastAPI backend (port 8000):
+
+```powershell
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+2) Start the Flask scraper service (port 5001 by default):
+
+```powershell
+python scripts/scraper/app.py
+```
 
 
+#### API examples
+
+- Health: GET `/health`
+- Simple chat: POST `/chat/simple` with JSON { messages: [...], llm_choice: 'openai' }
+- Text-to-SQL: POST `/query` with JSON { question: '...', llm_choice: 'openai' }
+- Scrape product: POST `/api/scrape/tiki` with JSON { url: '...', max_pages: 1, per_page: 20 }
 

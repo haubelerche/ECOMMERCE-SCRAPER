@@ -1,13 +1,4 @@
-"""Tiki.vn category scraper for electronics products.
 
-This module scrapes product listings from Tiki category pages:
-- Điện thoại - Máy tính bảng: https://tiki.vn/dien-thoai-may-tinh-bang/c1789
-- Thiết bị KTS - Phụ kiện số: https://tiki.vn/thiet-bi-kts-phu-kien-so/c1815
-
-Contract:
-- Input: category URL or category ID
-- Output: list of product dictionaries with basic info + reviews
-"""
 from __future__ import annotations
 
 import re

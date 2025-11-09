@@ -1,33 +1,3 @@
-"""Tiki.vn product and reviews scraper using public web APIs.
-
-This module avoids brittle HTML parsing by calling Tiki's web API endpoints.
-
-Contract
-- Input: product page URL like https://tiki.vn/some-product-p123456.html
-- Output: dict with keys:
-    {
-      "product_id": int,
-      "product_name": str,
-      "average_rating": float | None,
-      "review_count": int | None,
-      "product_url": str,
-      "reviews": [
-          {
-            "review_id": int,
-            "author": str | None,
-            "title": str | None,
-            "content": str | None,
-            "rating": float | None,
-            "created_at": str,  # ISO 8601
-            "thank_count": int | None
-          }, ...
-      ]
-    }
-
-Notes
-- This is best-effort based on Tiki's current API shape and may change.
-- Add light retry and a browser-like header to reduce blocks.
-"""
 from __future__ import annotations
 
 import re
@@ -43,11 +13,7 @@ PRODUCT_ID_RE = re.compile(r"-p(\d+)\.html")
 
 
 def parse_product_id(url: str) -> Optional[int]:
-    """Extract numeric product ID from a Tiki product URL.
 
-    Examples:
-      https://tiki.vn/some-slug-p123456.html -> 123456
-    """
     if not url:
         return None
     m = PRODUCT_ID_RE.search(url)
@@ -97,10 +63,7 @@ def fetch_product(product_id: int) -> Dict[str, Any]:
 
 
 def fetch_reviews(product_id: int, page: int = 1, limit: int = 20) -> Dict[str, Any]:
-    """Fetch one page of reviews for a product.
-
-    Returns dict with keys: {"data": list, "paging": {"current_page", "last_page"}}
-    """
+ 
     url = "https://tiki.vn/api/v2/reviews"
     params = {
         "product_id": product_id,

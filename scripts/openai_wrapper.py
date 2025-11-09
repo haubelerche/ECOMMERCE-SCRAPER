@@ -6,12 +6,7 @@ from openai import OpenAI, OpenAIError
 class OpenAIWrapper:
 
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o-mini"):
-        """Initialize OpenAI client.
-        
-        Args:
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
-            model: Model to use for completions (default: gpt-4o-mini)
-        """
+
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY must be set in environment or passed to constructor")
