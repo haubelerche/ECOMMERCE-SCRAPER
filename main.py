@@ -74,20 +74,6 @@ async def cors_info():  # pragma: no cover
         "hint": "Set CORS_ORIGINS env (comma-separated) or '*' for all (no credentials)."
     }
 
-# OPTIONS handler for CORS preflight
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    """Handle all OPTIONS requests for CORS preflight"""
-    from fastapi import Response
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*" if ALLOWED_ORIGINS == ["*"] else ",".join(ALLOWED_ORIGINS),
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Max-Age": "3600",
-        }
-    )
 
 try:
     supabase_client = SupabaseClient()
