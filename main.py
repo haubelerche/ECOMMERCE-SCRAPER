@@ -25,12 +25,17 @@ from scraper.tiki_category_scraper import (
 load_dotenv()
 
 
-ALLOWED_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS").split(",") if o.strip()]
-ALLOW_CREDENTIALS = "*" not in ALLOWED_ORIGINS
+
+cors = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,https://insightlytics-chatbot.vercel.app"
+)
+ALLOWED_ORIGINS = [o.strip() for o in cors.split(",") if o.strip()]
+
+ALLOW_CREDENTIALS = not (ALLOWED_ORIGINS == ["*"])
 
 app = FastAPI()
 
-# Add CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -41,29 +46,44 @@ app.add_middleware(
 
 print(f"🔧 CORS configured: origins={ALLOWED_ORIGINS} allow_credentials={ALLOW_CREDENTIALS}")
 
-# Initialize Supabase client for storing scraped reviews
+# Quick CORS debug endpoint
+@app.get("/__cors__")
+async def cors_info():  # pragma: no cover
+    return {
+        "origins": ALLOWED_ORIGINS,
+        "allow_credentials": ALLOW_CREDENTIALS,
+        "hint": "Set CORS_ORIGINS env (comma-separated) or '*' for all (no credentials)."
+    }
+
 try:
     supabase_client = SupabaseClient()
 except Exception as e:
     print(f"⚠️ Warning: Supabase initialization failed: {e}")
     supabase_client = None
 
+
+def ensure_supabase():
+    if not supabase_client:
+        raise HTTPException(status_code=503, detail="Supabase client not initialized on server")
+
 # LLM configurations
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL")  # Default Ollama port
+LOCAL_LLM_URL = os.getenv("LOCAL_LLM_URL") 
+if OPENAI_API_KEY:
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+else:
+    openai_client = None  # type: ignore
+    print("⚠️ OPENAI_API_KEY not set; OpenAI features disabled")
 
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
-
-# Make Gemini optional: try to import at startup, but don't fail if missing
 try:
-    import google.generativeai as genai  # type: ignore
+    import google.generativeai as genai  
     GENAI_AVAILABLE = True
     if GEMINI_API_KEY:
         genai.configure(api_key=GEMINI_API_KEY)
 except Exception as _e:  # ImportError or other misconfig
     GENAI_AVAILABLE = False
-    genai = None  # type: ignore
+    genai = None  
     print(f"⚠️ google-generativeai not available; Gemini features disabled: {_e}")
 
 
@@ -72,7 +92,7 @@ class DBCredentials(BaseModel):
     db_user: str
     db_password: str
     db_host: str
-    db_port: str | int  # Accept both string and integer
+    db_port: str | int  
     db_name: str
 
 
@@ -97,7 +117,6 @@ class ChatRequest(BaseModel):
     llm_choice: Literal["openai", "gemini", "local"] = "openai"
 
 
-# LLM choice function
 def choose_llm(llm_choice: str):
     if llm_choice == "openai":
         return nl_to_sql_openai
@@ -135,8 +154,9 @@ def get_default_db_credentials() -> DBCredentials:
         )
 
 
-# OpenAI function
 def nl_to_sql_openai(question: str, table_info: str) -> str:
+    if openai_client is None:
+        raise HTTPException(status_code=503, detail="OpenAI not configured on server")
     prompt = f"""
     The sql code should not have ``` in beginning or end and sql word in output
     Given the following tables in a PostgreSQL database:
@@ -178,14 +198,12 @@ def nl_to_sql_gemini(question: str, table_info: str) -> str:
     Return only the SQL query, without any additional explanation.
     """
 
-    # Choose a stable flash model (update if quota/model name changes)
-    model = genai.GenerativeModel('gemini-2.5-flash')  # type: ignore
+    model = genai.GenerativeModel('gemini-2.5-flash')  
     response = model.generate_content(prompt)
 
     return response.text.strip()
 
 
-# Local LLM function (using Ollama)
 def nl_to_sql_local(question: str, table_info: str) -> str:
     prompt = f"""
     Given the following tables in a PostgreSQL database:
@@ -396,6 +414,8 @@ def format_response_with_llm(sql_query: str, query_results: str, llm_choice: str
 
 
 def format_response_openai(prompt: str) -> str:
+    if openai_client is None:
+        raise HTTPException(status_code=503, detail="OpenAI not configured on server")
     response = openai_client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -521,6 +541,8 @@ SQL: SELECT r.*, p.product_name FROM reviews r JOIN products p ON r.product_id =
 
         # Choose LLM based on request
         if request.llm_choice == "openai":
+            if openai_client is None:
+                raise HTTPException(status_code=503, detail="OpenAI not configured on server")
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
@@ -590,6 +612,8 @@ async def chat_simple(request: SimpleChatRequest):
 
         # Choose LLM based on request
         if request.llm_choice == "openai":
+            if openai_client is None:
+                raise HTTPException(status_code=503, detail="OpenAI not configured on server")
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
@@ -681,6 +705,7 @@ class ReviewCreate(BaseModel):
 async def create_review(review: ReviewCreate):
     """Store a review in Supabase 'reviews' table."""
     try:
+        ensure_supabase()
         record = review.dict(exclude_none=True)
         # Map API 'url' field to DB 'review_url' column
         if "url" in record:
@@ -696,6 +721,7 @@ async def create_review(review: ReviewCreate):
 async def get_reviews(limit: int = 10, url: Optional[str] = None):
     """Retrieve reviews from Supabase 'reviews' table."""
     try:
+        ensure_supabase()
         if url:
             # API accepts 'url' param; map to DB column 'review_url'
             reviews = supabase_client.select("reviews", match={"review_url": url})
@@ -744,6 +770,7 @@ async def scrape_tiki_endpoint(request: TikiScrapeRequest):
     }
     """
     try:
+        ensure_supabase()
         scraped = scrape_tiki(request.url, max_pages=request.max_pages, per_page=request.per_page)
         
         # Insert reviews into Supabase
@@ -801,6 +828,7 @@ async def scrape_tiki_category_endpoint(request: TikiCategoryScrapeRequest):
     }
     """
     try:
+        ensure_supabase()
         scraped = scrape_category(
             request.category_url,
             max_pages=request.max_pages,
@@ -888,6 +916,7 @@ async def scrape_tiki_electronics_endpoint(request: TikiElectronicsScrapeRequest
     }
     """
     try:
+        ensure_supabase()
         scraped = scrape_all_electronics(
             max_pages_per_category=request.max_pages_per_category,
             per_page=request.per_page,
