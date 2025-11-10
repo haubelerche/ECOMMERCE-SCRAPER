@@ -30,18 +30,37 @@ cors = os.getenv(
     "CORS_ORIGINS",
     "http://localhost:8000,http://127.0.0.1:8000,http://localhost:5173,https://insightlytics-chatbot.vercel.app"
 )
-ALLOWED_ORIGINS = [o.strip() for o in cors.split(",") if o.strip()]
 
-ALLOW_CREDENTIALS = not (ALLOWED_ORIGINS == ["*"])
+# Handle wildcard CORS
+if cors.strip() == "*":
+    ALLOWED_ORIGINS = ["*"]
+    ALLOW_CREDENTIALS = False
+else:
+    # Split, strip whitespace AND trailing slashes to avoid mismatch with browser origin (which never ends with /)
+    ALLOWED_ORIGINS = []
+    for raw in cors.split(","):
+        cleaned = raw.strip()
+        if not cleaned:
+            continue
+        # Remove any trailing slash for consistent comparison
+        if cleaned.endswith('/'):
+            cleaned = cleaned.rstrip('/')
+        if cleaned not in ALLOWED_ORIGINS:  # de-duplicate while preserving order
+            ALLOWED_ORIGINS.append(cleaned)
+    
+    ALLOW_CREDENTIALS = True
 
 app = FastAPI()
 
+# Add CORS middleware with explicit configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=ALLOW_CREDENTIALS,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 print(f"🔧 CORS configured: origins={ALLOWED_ORIGINS} allow_credentials={ALLOW_CREDENTIALS}")
@@ -54,6 +73,21 @@ async def cors_info():  # pragma: no cover
         "allow_credentials": ALLOW_CREDENTIALS,
         "hint": "Set CORS_ORIGINS env (comma-separated) or '*' for all (no credentials)."
     }
+
+# OPTIONS handler for CORS preflight
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle all OPTIONS requests for CORS preflight"""
+    from fastapi import Response
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*" if ALLOWED_ORIGINS == ["*"] else ",".join(ALLOWED_ORIGINS),
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "3600",
+        }
+    )
 
 try:
     supabase_client = SupabaseClient()
